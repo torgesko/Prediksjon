@@ -1,10 +1,7 @@
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
+from sklearn2pmml import PMMLPipeline, sklearn2pmml
 import numpy as np
-import matplotlib.pyplot as plt
-
-import joblib
-
 import random
 
 def hent_priser(sone):
@@ -73,9 +70,8 @@ def hovedprogram():
     X = np.column_stack((train_nedbor, train_temps, train_soner))    
     Y = np.array(train_priser)
 
-    model = RandomForestRegressor(n_estimators=5)
+    model = RandomForestRegressor(n_estimators=3)
 
-    #model = joblib.load("model.pkl") #RandomForestRegressor()
     model.fit(X, Y)
 
     sum = 0
@@ -90,7 +86,19 @@ def hovedprogram():
     gj_sum = sum / len(test_soner)
     print(f"ERROR: {gj_sum}")
     
-    joblib.dump(model, "prediksjon.pkl")
+    pipeline = PMMLPipeline([
+        ("regressor", model)
+    ])
+
+    pipeline.input_specification = [
+        ("input", "float", (3,))
+    ]
+    
+    pipeline.output_specification = [
+        ("output", "float")
+    ]
+
+    sklearn2pmml(pipeline, "RandomForestRegressor.pmml")
 
 
 hovedprogram()
