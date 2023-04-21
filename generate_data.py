@@ -17,7 +17,7 @@ soner = {
 maaneder = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 def hent_priser(sone):
-    with open(f"data/priser/min/{sone}.txt", "w") as file:
+    with open(f"data/priser/{sone}.txt", "w") as file:
         stop = False
 
         for aar in range(2021, 2024):
@@ -29,9 +29,12 @@ def hent_priser(sone):
                 
                     for dag in range(1, maaneder[maaned] + 1):
                         faktisk_dag = str(dag).zfill(2)
+
+                        print(f"{faktisk_aar}/{faktisk_maaned}-{faktisk_dag}_{sone}")
+
                         response = requests.get(f"https://www.hvakosterstrommen.no/api/v1/prices/{faktisk_aar}/{faktisk_maaned}-{faktisk_dag}_{sone}.json")
                         if response.status_code == 200:
-                            gj_pris = pd.DataFrame(response.json())["NOK_per_kWh"].min()
+                            gj_pris = pd.DataFrame(response.json())["NOK_per_kWh"].mean()
                             file.write(f"{gj_pris}\n")
                         else:
                             stop = True
@@ -44,10 +47,13 @@ def hent_priser(sone):
                     faktisk_maaned = str(maaned + 1).zfill(2)
                     for dag in range(1, maaneder[maaned] + 1):
                         faktisk_dag = str(dag).zfill(2)
+
+                        print(f"{faktisk_aar}/{faktisk_maaned}-{faktisk_dag}_{sone}")
+
                         response = requests.get(f"https://www.hvakosterstrommen.no/api/v1/prices/{faktisk_aar}/{faktisk_maaned}-{faktisk_dag}_{sone}.json")
 
                         if response.status_code == 200:
-                            gj_pris = pd.DataFrame(response.json())["NOK_per_kWh"].min()
+                            gj_pris = pd.DataFrame(response.json())["NOK_per_kWh"].mean()
                             file.write(f"{gj_pris}\n")
                         else:
                             stop = True
@@ -68,37 +74,68 @@ def hent_nedbor(sone):
             faktisk_aar = str(aar)
 
             if aar == 2021:
-                for maaned in range(11, len(maaneder)): # Faktisk maaned - 1 = start
+                for maaned in range(10, len(maaneder)):
                     faktisk_maaned = str(maaned + 1).zfill(2)
                     
-                    for dag in range(1, maaneder[maaned] + 1):
-                        faktisk_dag = str(dag).zfill(2)
 
-                        faktisk_dato = f"{faktisk_aar}-{faktisk_maaned}-{faktisk_dag}"
+                    if maaned != 10:
+                        for dag in range(1, maaneder[maaned] + 1):
+                            faktisk_dag = str(dag).zfill(2)
 
-                        parameters["referencetime"] = faktisk_dato
+                            faktisk_dato = f"{faktisk_aar}-{faktisk_maaned}-{faktisk_dag}"
 
-                        response = requests.get(endpoint, parameters, auth=(client_id,''))
+                            parameters["referencetime"] = faktisk_dato
 
-                        if response.status_code == 200:
-                            data = response.json()["data"]
+                            response = requests.get(endpoint, parameters, auth=(client_id,''))
 
-                            dataframe = pd.DataFrame()
+                            if response.status_code == 200:
+                                data = response.json()["data"]
 
-                            for entry in data:
-                                df = pd.DataFrame(entry["observations"])
-                                dataframe = pd.concat([dataframe, df])
-                            
-                            mean_nedbor = dataframe["value"].mean()
-                            file.write(f"{mean_nedbor}\n");
-                            
-                            print(faktisk_dato)
+                                dataframe = pd.DataFrame()
 
-                        else:
-                            stop = True
+                                for entry in data:
+                                    df = pd.DataFrame(entry["observations"])
+                                    dataframe = pd.concat([dataframe, df])
+
+                                mean_nedbor = dataframe["value"].mean()
+                                file.write(f"{mean_nedbor}\n");
+
+                                print(faktisk_dato)
+
+                            else:
+                                stop = True
+                                break
+                        if stop:
                             break
-                    if stop:
-                        break
+                    else:
+                        for dag in range(24,maaneder[maaned] + 1):
+                            faktisk_dag = str(dag).zfill(2)
+
+                            faktisk_dato = f"{faktisk_aar}-{faktisk_maaned}-{faktisk_dag}"
+
+                            parameters["referencetime"] = faktisk_dato
+
+                            response = requests.get(endpoint, parameters, auth=(client_id,''))
+
+                            if response.status_code == 200:
+                                data = response.json()["data"]
+
+                                dataframe = pd.DataFrame()
+
+                                for entry in data:
+                                    df = pd.DataFrame(entry["observations"])
+                                    dataframe = pd.concat([dataframe, df])
+
+                                mean_nedbor = dataframe["value"].mean()
+                                file.write(f"{mean_nedbor}\n");
+
+                                print(faktisk_dato)
+
+                            else:
+                                stop = True
+                                break
+                        if stop:
+                            break
             else:
                 for maaned in range(0, len(maaneder)):
                     faktisk_maaned = str(maaned + 1).zfill(2)
@@ -201,11 +238,10 @@ def hent_temperatur(sone):
             if stop:
                 break
 
-# This is going to be an interface
 def hovedprogram():
     for sone in soner:
-        #hent_priser(sone)
-        hent_temperatur(sone)
+        hent_priser(sone)
+        #hent_temperatur(sone)
         #hent_nedbor(sone)
 
 hovedprogram()

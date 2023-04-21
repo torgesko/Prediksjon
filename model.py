@@ -4,7 +4,7 @@ from sklearn2pmml import PMMLPipeline, sklearn2pmml
 import numpy as np
 import random
 
-def hent_priser(sone):
+def hent_priser(sone):  
     with open(f"data/priser/{sone}.txt", "r") as file:
         priser = file.read().split("\n")
         priser = [float(x) for x in priser]
